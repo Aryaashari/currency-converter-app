@@ -221,13 +221,14 @@ async function generateChartData(startDate, endDate) {
 
         const dataPertama = data[0];
         const dataTerakhir = data[data.length-1];
-        const selisih = (1*dataTerakhir.rate) - (1*dataPertama.rate);
+        let selisih = (1*dataTerakhir.rate) - (1*dataPertama.rate);
         const persenPerubahan = ((selisih/dataPertama.rate)*100).toFixed(2);
 
         textTertinggi.textContent = fmt.format(tertinggi);
         textTerendah.textContent = fmt.format(terendah);
         textRata2.textContent = fmt.format(Math.round(rata2));
         mainGrafikText.textContent = fmt.format(1*dataTerakhir.rate);
+        selisih = fmt.format(selisih);
 
         subTextGrafik.textContent = `${selisih >= 0 ? '+' + selisih : selisih} (${persenPerubahan >= 0 ? '+' + persenPerubahan : persenPerubahan}%)`;
 
