@@ -34,6 +34,8 @@ const svgArrowDown = document.getElementById("svgArrowDown");
 
 const textPergerakanGrafik = document.getElementById("textPergerakanGrafik");
 
+const fmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 4 });
+
 function showLoader(elm) {
     if (elm.classList.contains("hidden") && !elm.classList.contains("flex")) {
         elm.classList.remove("hidden");
@@ -114,12 +116,12 @@ async function prosesKonversi(isUbahCurrency = false) {
         }
 
         const data = await res.json();
-        jumlahKonversiText.textContent = `${jumlah} ${detailFromCurrency.name}`;
+        jumlahKonversiText.textContent = `${fmt.format(jumlah)} ${detailFromCurrency.name}`;
 
         const resPerhitungan = (jumlah * data.rate);
-        resultKonversiText.textContent = resPerhitungan;
+        resultKonversiText.textContent = fmt.format(resPerhitungan);
         currencyResultKonversiText.textContent = detailToCurrency.iso_code;
-        keteranganText.textContent = `1 ${detailFromCurrency.iso_code} = ${1 * data.rate} ${detailToCurrency.iso_code}`;
+        keteranganText.textContent = `1 ${detailFromCurrency.iso_code} = ${fmt.format(1 * data.rate)} ${detailToCurrency.iso_code}`;
         const formattedDate = new Date(data.date).toLocaleDateString("id-ID", {
             day: "2-digit",
             month: "short",
@@ -222,10 +224,10 @@ async function generateChartData(startDate, endDate) {
         const selisih = (1*dataTerakhir.rate) - (1*dataPertama.rate);
         const persenPerubahan = ((selisih/dataPertama.rate)*100).toFixed(2);
 
-        textTertinggi.textContent = tertinggi.toFixed(4);
-        textTerendah.textContent = terendah.toFixed(4);
-        textRata2.textContent = rata2.toFixed(4);
-        mainGrafikText.textContent = 1*dataTerakhir.rate;
+        textTertinggi.textContent = fmt.format(tertinggi);
+        textTerendah.textContent = fmt.format(terendah);
+        textRata2.textContent = fmt.format(Math.round(rata2));
+        mainGrafikText.textContent = fmt.format(1*dataTerakhir.rate);
 
         subTextGrafik.textContent = `${selisih >= 0 ? '+' + selisih : selisih} (${persenPerubahan >= 0 ? '+' + persenPerubahan : persenPerubahan}%)`;
 
