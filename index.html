@@ -7,7 +7,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>currency-convertion</title>
   <link rel="stylesheet" href="src/style.css">
-  <script src="src/main.js" defer></script>
+  <script type="module" src="src/main.js" defer></script>
+  <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.6.1/chart.js"></script> -->
 </head>
 
 <body class="bg-gray-100">
@@ -123,23 +124,25 @@
             </select>
           </div>
 
-          <div id="grafik"></div>
+          <div>
+            <canvas id="grafik"></canvas>
+          </div>
 
           <div id="summary" class="flex justify-between gap-3">
 
             <div class="bg-gray-100 rounded-2xl p-2 flex-1">
               <p class="text-xs text-gray-400">Tertinggi</p>
-              <p class="font-semibold text-sm">15.000,54</p>
+              <p class="font-semibold text-sm" id="textTertinggi">15.000,54</p>
             </div>
 
             <div class="bg-gray-100 rounded-2xl p-2 flex-1">
               <p class="text-xs text-gray-400">Terendah</p>
-              <p class="font-semibold text-sm">15.000,54</p>
+              <p class="font-semibold text-sm" id="textTerendah">15.000,54</p>
             </div>
 
             <div class="bg-gray-100 rounded-2xl p-2 flex-1">
               <p class="text-xs text-gray-400">Rata-rata</p>
-              <p class="font-semibold text-sm">15.000,54</p>
+              <p class="font-semibold text-sm" id="textRata2">15.000,54</p>
             </div>
 
           </div>
