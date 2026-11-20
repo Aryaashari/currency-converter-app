@@ -10,8 +10,9 @@ const loaderResult = document.getElementById("loaderResult");
 const loaderGrafik = document.getElementById("loaderGrafik");
 
 const resultContainer = document.getElementById("resultContainer");
-
 const currencySymbolText = document.getElementById("currencySymbolText");
+
+const btnChange = document.getElementById("btnChange");
 
 // Text
 const jumlahKonversiText = document.getElementById("jumlahKonversiText");
@@ -23,6 +24,15 @@ const dateText = document.getElementById("dateText");
 const textTertinggi = document.getElementById("textTertinggi");
 const textTerendah = document.getElementById("textTerendah");
 const textRata2 = document.getElementById("textRata2");
+
+const mainGrafikText = document.getElementById("mainGrafikText");
+const subTextGrafik = document.getElementById("subTextGrafik");
+const subTextContainer = document.getElementById("subTextContainer");
+
+const svgArrowUp = document.getElementById("svgArrowUp");
+const svgArrowDown = document.getElementById("svgArrowDown");
+
+const textPergerakanGrafik = document.getElementById("textPergerakanGrafik");
 
 function showLoader(elm) {
     if (elm.classList.contains("hidden") && !elm.classList.contains("flex")) {
@@ -58,8 +68,8 @@ let listMataUang = [];
         const data = await res.json();
         listMataUang = data;
 
-        selectFromElm.length = 1;
-        selectToElm.length = 1;
+        selectFromElm.length = 0;
+        selectToElm.length = 0;
         data.forEach((item) => {
             const newOption1 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
             const newOption2 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
@@ -207,9 +217,32 @@ async function generateChartData(startDate, endDate) {
         });
         rata2 = (rata2 / data.length);
 
+        const dataPertama = data[0];
+        const dataTerakhir = data[data.length-1];
+        const selisih = (1*dataTerakhir.rate) - (1*dataPertama.rate);
+        const persenPerubahan = ((selisih/dataPertama.rate)*100).toFixed(2);
+
         textTertinggi.textContent = tertinggi.toFixed(4);
         textTerendah.textContent = terendah.toFixed(4);
         textRata2.textContent = rata2.toFixed(4);
+        mainGrafikText.textContent = 1*dataTerakhir.rate;
+
+        subTextGrafik.textContent = `${selisih >= 0 ? '+' + selisih : selisih} (${persenPerubahan >= 0 ? '+' + persenPerubahan : persenPerubahan}%)`;
+
+        textPergerakanGrafik.textContent = `Pergerakan ${currentFromCurrency.toUpperCase()} ke ${currentToCurrency.toUpperCase()}`;
+
+        subTextContainer.classList.remove("bg-green-200");
+        subTextContainer.classList.remove("bg-red-200");
+
+        svgArrowUp.classList.add("hidden");
+        svgArrowDown.classList.add("hidden");
+        if (selisih >= 0) {
+            subTextContainer.classList.add("bg-green-200");
+            svgArrowUp.classList.remove("hidden");
+        } else {
+            subTextContainer.classList.add("bg-red-200");
+            svgArrowDown.classList.remove("hidden");
+        }
 
         return {
             labels: labels,
@@ -227,6 +260,33 @@ async function generateChartData(startDate, endDate) {
     }
 
 }
+
+btnChange.addEventListener("click", () => {
+    const activeFromOption = selectFromElm.options;
+    const activeToOption = selectFromElm.options;
+    let currentFromCurrencyTemp = currentFromCurrency;
+    let currentToCurrencyTemp = currentToCurrency;
+
+    for (let i = 0; i < activeFromOption.length; i++) {
+        if (selectFromElm.options[i].value.toLowerCase() === currentToCurrency) {
+            selectFromElm.options[i].selected = true;
+            currentFromCurrencyTemp = selectFromElm.options[i].value.toLowerCase();
+        }
+    }
+
+    for (let i = 0; i < activeToOption.length; i++) {
+        if (selectToElm.options[i].value.toLowerCase() === currentFromCurrency) {
+            selectToElm.options[i].selected = true;
+            currentToCurrencyTemp = selectToElm.options[i].value.toLowerCase();
+        }
+    }
+
+    currentFromCurrency = currentFromCurrencyTemp;
+    currentToCurrency = currentToCurrencyTemp;
+
+    prosesKonversi();
+    drawChart();
+});
 
 async function drawChart() {
     try {
