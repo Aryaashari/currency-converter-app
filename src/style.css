@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  position: relative;
+}
+
+#loader {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    flex-wrap: nowrap;
+}
