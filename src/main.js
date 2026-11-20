@@ -6,7 +6,12 @@ const selectToElm = document.getElementById("to");
 
 const baseApiUrl = "https://api.frankfurter.dev/v2/";
 
-const loader = document.getElementById("loader");
+const loaderResult = document.getElementById("loaderResult");
+const loaderGrafik = document.getElementById("loaderGrafik");
+
+const resultContainer = document.getElementById("resultContainer");
+
+const currencySymbolText = document.getElementById("currencySymbolText");
 
 // Text
 const jumlahKonversiText = document.getElementById("jumlahKonversiText");
@@ -19,17 +24,17 @@ const textTertinggi = document.getElementById("textTertinggi");
 const textTerendah = document.getElementById("textTerendah");
 const textRata2 = document.getElementById("textRata2");
 
-function showLoader() {
-    if (loader.classList.contains("hidden") && !loader.classList.contains("flex")) {
-        loader.classList.remove("hidden");
-        loader.classList.add("flex");
+function showLoader(elm) {
+    if (elm.classList.contains("hidden") && !elm.classList.contains("flex")) {
+        elm.classList.remove("hidden");
+        elm.classList.add("flex");
     }
 }
 
-function hideLoader() {
-    if (!loader.classList.contains("hidden") && loader.classList.contains("flex")) {
-        loader.classList.remove("flex");
-        loader.classList.add("hidden");
+function hideLoader(elm) {
+    if (!elm.classList.contains("hidden") && elm.classList.contains("flex")) {
+        elm.classList.remove("flex");
+        elm.classList.add("hidden");
     }
 }
 
@@ -40,10 +45,9 @@ let listMataUang = [];
 (async () => {
 
     try {
-        showLoader();
+        showLoader(loaderResult);
         if (selectFromElm.value === "" || selectToElm.value === "") {
-            inputJumlahElm.value = 0;
-            inputJumlahElm.disabled = true;
+            inputJumlahElm.value = 1000;
         }
 
         const res = await fetch(baseApiUrl + "currencies");
@@ -59,23 +63,39 @@ let listMataUang = [];
         data.forEach((item) => {
             const newOption1 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
             const newOption2 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
+            if (item.iso_code === "USD") {
+                newOption1.selected = true;    
+                currentFromCurrency = item.iso_code.toLowerCase();
+            }
+
+            if (item.iso_code === "IDR") {
+                newOption2.selected = true;
+                currentToCurrency = item.iso_code.toLowerCase();
+            }
+
             selectFromElm.add(newOption1);
             selectToElm.add(newOption2);
         });
-        hideLoader();
+        prosesKonversi();
+        drawChart();
+        hideLoader(loaderResult);
     } catch (err) {
-        hideLoader();
+        hideLoader(loaderResult);
         console.log(err.message);
     }
 
 })()
 
-async function prosesKonversi() {
+async function prosesKonversi(isUbahCurrency = false) {
     const jumlah = Number(inputJumlahElm.value);
     const detailFromCurrency = listMataUang.find(item => item.iso_code.toLowerCase() === currentFromCurrency);
     const detailToCurrency = listMataUang.find(item => item.iso_code.toLowerCase() === currentToCurrency);
 
     try {
+        showLoader(loaderResult);
+        if (isUbahCurrency) {
+            showLoader(loaderGrafik);
+        }
         const url = `${baseApiUrl}rate/${currentFromCurrency}/${currentToCurrency}`;
         const res = await fetch(url);
 
@@ -86,7 +106,7 @@ async function prosesKonversi() {
         const data = await res.json();
         jumlahKonversiText.textContent = `${jumlah} ${detailFromCurrency.name}`;
 
-        const resPerhitungan = jumlah * data.rate;
+        const resPerhitungan = (jumlah * data.rate);
         resultKonversiText.textContent = resPerhitungan;
         currencyResultKonversiText.textContent = detailToCurrency.iso_code;
         keteranganText.textContent = `1 ${detailFromCurrency.iso_code} = ${1 * data.rate} ${detailToCurrency.iso_code}`;
@@ -97,7 +117,14 @@ async function prosesKonversi() {
             timeZone: "UTC",
         });;
         dateText.textContent = `Tanggal: ${formattedDate}`;
+        
+        currencySymbolText.textContent = currentFromCurrency.toLocaleUpperCase();
+        if (isUbahCurrency) {
+            drawChart();
+        }
+        hideLoader(loaderResult);
     } catch (err) {
+        hideLoader();
         console.log(err.message);
     }
 }
@@ -112,11 +139,10 @@ selectFromElm.addEventListener("change", () => {
 
     if (selectToElm.value !== "" && Number(inputJumlahElm.value) == 0) {
         inputJumlahElm.value = 1;
-        inputJumlahElm.disabled = false;
     }
 
     if (currentFromCurrency !== "" && currentToCurrency !== "") {
-        prosesKonversi();
+        prosesKonversi(true);
     }
 });
 
@@ -130,11 +156,10 @@ selectToElm.addEventListener("change", () => {
 
     if (selectFromElm.value !== "" && Number(inputJumlahElm.value) == 0) {
         inputJumlahElm.value = 1;
-        inputJumlahElm.disabled = false;
     }
 
     if (currentFromCurrency !== "" && currentToCurrency !== "") {
-        prosesKonversi();
+        prosesKonversi(true);
     }
 
 });
@@ -157,13 +182,11 @@ async function generateChartData(startDate, endDate) {
     try {
 
         const url = baseApiUrl + `rates?from=${startDate}&to=${endDate}&base=${currentFromCurrency}&quotes=${currentToCurrency}`;
-        console.log(url);
         const res = await fetch(url);
         if (!res.ok) {
             throw new Error(res);
         }
         const data = await res.json();
-        console.log(data);
 
         let tertinggi = 0;
         let terendah = 0;
@@ -182,16 +205,16 @@ async function generateChartData(startDate, endDate) {
 
             arrData.push(1 * item.rate);
         });
-        rata2 = rata2 / data.length;
+        rata2 = (rata2 / data.length);
 
-        textTertinggi.textContent = tertinggi;
-        textTerendah.textContent = terendah;
-        textRata2.textContent = rata2;
+        textTertinggi.textContent = tertinggi.toFixed(4);
+        textTerendah.textContent = terendah.toFixed(4);
+        textRata2.textContent = rata2.toFixed(4);
 
         return {
             labels: labels,
             datasets: [
-                    {
+                {
                     label: `${currentFromCurrency.toUpperCase()} to ${currentToCurrency.toUpperCase()}`,
                     data: arrData,
                     pointStyle: 'circle'
@@ -205,20 +228,19 @@ async function generateChartData(startDate, endDate) {
 
 }
 
-let chart = null;
-
-timeSelectElm.addEventListener("change", async () => {
+async function drawChart() {
     try {
+        showLoader(loaderGrafik);
         const endDate = new Date();
         let startDate = new Date();
-    
+
         startDate.setDate(startDate.getDate() - Number(timeSelectElm.value));
         const data = await generateChartData(startDate.toLocaleDateString('en-CA'), endDate.toLocaleDateString('en-CA'));
-    
+
         if (chart) {
             chart.destroy();
         }
-        console.log(data);
+
         chart = new Chart(ctx, {
             type: 'line',
             data: data,
@@ -231,24 +253,19 @@ timeSelectElm.addEventListener("change", async () => {
                 }
             }
         });
-    
-        console.log(startDate.toLocaleDateString('en-CA'));
-        console.log(endDate.toLocaleDateString('en-CA'));
+        hideLoader(loaderGrafik);
     } catch(err) {
+        hideLoader(loaderGrafik);
+        throw err;
+    }
+}
+
+let chart = null;
+
+timeSelectElm.addEventListener("change", async () => {
+    try {
+    drawChart();
+    } catch (err) {
         console.log(err);
     }
-
 });
-
-// const data = {
-//     labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6'],
-//     datasets: [
-//         {
-//             label: 'Dataset',
-//             data: { count: 6, min: -100, max: 100 },
-//             pointStyle: 'circle',
-//             pointRadius: 10,
-//             pointHoverRadius: 15
-//         }
-//     ]
-// };

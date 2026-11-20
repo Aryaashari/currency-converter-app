@@ -12,9 +12,9 @@
 </head>
 
 <body class="bg-gray-100">
-  <div id="loader" class="hidden">
-    <img src="src/assets/loader.gif" width="50" alt="Loader">
-  </div>
+  <!-- <div id="loader" class="hidden">
+    <img src="src/assets/loader2.gif" width="50" alt="Loader">
+  </div> -->
 
   <!-- Start Header -->
   <header>
@@ -41,7 +41,7 @@
             <label for="jumlah">Jumlah</label>
             <div class="flex items-center p-2 border-gray-200 border-2 rounded-2xl">
               <input id="jumlah" name="jumlah" type="text" class="p-2 focus:outline-none w-full">
-              <span class="font-semibold ml-2">USD</span>
+              <span id="currencySymbolText" class="font-semibold ml-2">USD</span>
             </div>
           </div>
 
@@ -80,7 +80,10 @@
 
           </div>
 
-          <div class="bg-lime-200 p-6 rounded-2xl flex flex-col gap-3">
+          <div id="resultContainer" class="bg-lime-200 p-6 rounded-2xl flex-col gap-3 flex relative">
+            <div id="loaderResult" class="hidden loader bg-lime-200 rounded-2xl">
+              <img src="src/assets/loader2.gif" width="50" alt="Loader">
+            </div>
             <p id="jumlahKonversiText">100 Dolar AS</p>
 
             <div class="flex items-baseline gap-2">
@@ -98,7 +101,11 @@
       </div>
 
       <div id="right-content" class="flex-2 p-5">
-        <div class="bg-white p-3 rounded-xl">
+        <div class="bg-white p-3 rounded-xl relative">
+          <div id="loaderGrafik" class="hidden loader bg-white rounded-xl">
+            <img src="src/assets/loader2.gif" width="50" alt="Loader">
+          </div>
+
           <p>Pergerakan USD to IDR</p>
 
           <div class="flex items-center justify-between">
@@ -132,17 +139,17 @@
 
             <div class="bg-gray-100 rounded-2xl p-2 flex-1">
               <p class="text-xs text-gray-400">Tertinggi</p>
-              <p class="font-semibold text-sm" id="textTertinggi">15.000,54</p>
+              <p class="font-semibold text-sm" id="textTertinggi">-</p>
             </div>
 
             <div class="bg-gray-100 rounded-2xl p-2 flex-1">
               <p class="text-xs text-gray-400">Terendah</p>
-              <p class="font-semibold text-sm" id="textTerendah">15.000,54</p>
+              <p class="font-semibold text-sm" id="textTerendah">-</p>
             </div>
 
             <div class="bg-gray-100 rounded-2xl p-2 flex-1">
               <p class="text-xs text-gray-400">Rata-rata</p>
-              <p class="font-semibold text-sm" id="textRata2">15.000,54</p>
+              <p class="font-semibold text-sm" id="textRata2">-</p>
             </div>
 
           </div>
