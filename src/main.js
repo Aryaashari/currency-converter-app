@@ -253,7 +253,8 @@ async function generateChartData(startDate, endDate) {
                 {
                     label: `${currentFromCurrency.toUpperCase()} to ${currentToCurrency.toUpperCase()}`,
                     data: arrData,
-                    pointStyle: 'circle'
+                    pointStyle: 'circle',
+                    borderColor: `${selisih >= 0 ? 'green' : 'red'}`
                 }
             ]
         }
