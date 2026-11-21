@@ -18,6 +18,8 @@ const riwayatContainer = document.getElementById("riwayatContainer");
 const btnRiwayat = document.querySelectorAll(".btnRiwayat");
 const btnRemoveRiwayat = document.getElementById("btnRemoveRiwayat");
 
+const screenLoader = document.getElementById("screenLoader");
+
 // Text
 const jumlahKonversiText = document.getElementById("jumlahKonversiText");
 const resultKonversiText = document.getElementById("resultKonversiText");
@@ -114,6 +116,7 @@ let listMataUang = [];
         prosesKonversi();
         drawChart();
         hideLoader(loaderResult);
+        screenLoader.classList.add("hidden");
     } catch (err) {
         hideLoader(loaderResult);
         alert(err.message);
