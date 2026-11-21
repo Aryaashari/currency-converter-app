@@ -469,7 +469,7 @@ function saveToRiwayat() {
 }
 
 btnRemoveRiwayat.addEventListener("click", (item) => {
-    const isConfirm = confirm("Yakin ingin menhapus riwayat?");
+    const isConfirm = confirm("Yakin ingin menghapus riwayat?");
 
     if (isConfirm) {
         localStorage.setItem(KEY_RIWAYAT, JSON.stringify([]));
