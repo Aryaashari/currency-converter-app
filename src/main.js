@@ -14,6 +14,10 @@ const currencySymbolText = document.getElementById("currencySymbolText");
 
 const btnChange = document.getElementById("btnChange");
 
+const riwayatContainer = document.getElementById("riwayatContainer");
+const btnRiwayat = document.querySelectorAll(".btnRiwayat");
+const btnRemoveRiwayat = document.getElementById("btnRemoveRiwayat");
+
 // Text
 const jumlahKonversiText = document.getElementById("jumlahKonversiText");
 const resultKonversiText = document.getElementById("resultKonversiText");
@@ -34,7 +38,11 @@ const svgArrowDown = document.getElementById("svgArrowDown");
 
 const textPergerakanGrafik = document.getElementById("textPergerakanGrafik");
 
+const textRiwayatKosong = document.getElementById("textRiwayatKosong");
+
 const fmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 4 });
+
+const KEY_RIWAYAT = "localstorage-riwayat";
 
 function showLoader(elm) {
     if (elm.classList.contains("hidden") && !elm.classList.contains("flex")) {
@@ -62,6 +70,21 @@ let listMataUang = [];
             inputJumlahElm.value = 1000;
         }
 
+        if (!localStorage.getItem(KEY_RIWAYAT) || localStorage.getItem(KEY_RIWAYAT) === "[]") {
+            localStorage.setItem(KEY_RIWAYAT, JSON.stringify([
+                {
+                    id: "usd-idr",
+                    from: "usd",
+                    to: "idr"
+                }
+            ]));
+        }
+
+        const riwayat = getRiwayatFromLocalStorage();
+        riwayat.forEach((item) => {
+            generateBtnRiwayat(item.from, item.to);
+        });
+
         const res = await fetch(baseApiUrl + "currencies");
         if (!res.ok) {
             throw new Error(res.status);
@@ -76,7 +99,7 @@ let listMataUang = [];
             const newOption1 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
             const newOption2 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
             if (item.iso_code === "USD") {
-                newOption1.selected = true;    
+                newOption1.selected = true;
                 currentFromCurrency = item.iso_code.toLowerCase();
             }
 
@@ -93,10 +116,28 @@ let listMataUang = [];
         hideLoader(loaderResult);
     } catch (err) {
         hideLoader(loaderResult);
-        console.log(err.message);
+        alert(err.message);
     }
 
 })()
+
+function getRiwayatFromLocalStorage() {
+    try {
+        const raw = localStorage.getItem(KEY_RIWAYAT);
+        if (!raw) {
+            throw new Error("Error: Local Storage Tidak Valid");
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+            throw new Error("Error: Array Tidak Valid");
+        }
+
+        return parsed;
+    } catch(err) {
+        throw err;
+    }
+}
 
 async function prosesKonversi(isUbahCurrency = false) {
     const jumlah = Number(inputJumlahElm.value);
@@ -127,17 +168,18 @@ async function prosesKonversi(isUbahCurrency = false) {
             month: "short",
             year: "numeric",
             timeZone: "UTC",
-        });;
+        });
         dateText.textContent = `Tanggal: ${formattedDate}`;
-        
+
         currencySymbolText.textContent = currentFromCurrency.toLocaleUpperCase();
         if (isUbahCurrency) {
             drawChart();
+            saveToRiwayat();
         }
         hideLoader(loaderResult);
     } catch (err) {
-        hideLoader();
-        console.log(err.message);
+        hideLoader(loaderResult);
+        alert(err.message);
     }
 }
 
@@ -183,11 +225,37 @@ inputJumlahElm.addEventListener("input", () => {
 
 });
 
+btnChange.addEventListener("click", () => {
+    const activeFromOption = selectFromElm.options;
+    const activeToOption = selectFromElm.options;
+    let currentFromCurrencyTemp = currentFromCurrency;
+    let currentToCurrencyTemp = currentToCurrency;
+
+    for (let i = 0; i < activeFromOption.length; i++) {
+        if (selectFromElm.options[i].value.toLowerCase() === currentToCurrency) {
+            selectFromElm.options[i].selected = true;
+            currentFromCurrencyTemp = selectFromElm.options[i].value.toLowerCase();
+        }
+    }
+
+    for (let i = 0; i < activeToOption.length; i++) {
+        if (selectToElm.options[i].value.toLowerCase() === currentFromCurrency) {
+            selectToElm.options[i].selected = true;
+            currentToCurrencyTemp = selectToElm.options[i].value.toLowerCase();
+        }
+    }
+
+    currentFromCurrency = currentFromCurrencyTemp;
+    currentToCurrency = currentToCurrencyTemp;
+
+    prosesKonversi(true);
+    drawChart();
+});
 
 // Chart
 const ctx = document.getElementById("grafik").getContext('2d');
 const timeSelectElm = document.getElementById("time");
-
+let chart = null;
 
 async function generateChartData(startDate, endDate) {
 
@@ -220,14 +288,14 @@ async function generateChartData(startDate, endDate) {
         rata2 = (rata2 / data.length);
 
         const dataPertama = data[0];
-        const dataTerakhir = data[data.length-1];
-        let selisih = (1*dataTerakhir.rate) - (1*dataPertama.rate);
-        const persenPerubahan = ((selisih/dataPertama.rate)*100).toFixed(2);
+        const dataTerakhir = data[data.length - 1];
+        let selisih = (1 * dataTerakhir.rate) - (1 * dataPertama.rate);
+        const persenPerubahan = ((selisih / dataPertama.rate) * 100).toFixed(2);
 
         textTertinggi.textContent = fmt.format(tertinggi);
         textTerendah.textContent = fmt.format(terendah);
         textRata2.textContent = fmt.format(Math.round(rata2));
-        mainGrafikText.textContent = fmt.format(1*dataTerakhir.rate);
+        mainGrafikText.textContent = fmt.format(1 * dataTerakhir.rate);
         selisih = fmt.format(selisih);
 
         subTextGrafik.textContent = `${selisih >= 0 ? '+' + selisih : selisih} (${persenPerubahan >= 0 ? '+' + persenPerubahan : persenPerubahan}%)`;
@@ -265,33 +333,6 @@ async function generateChartData(startDate, endDate) {
 
 }
 
-btnChange.addEventListener("click", () => {
-    const activeFromOption = selectFromElm.options;
-    const activeToOption = selectFromElm.options;
-    let currentFromCurrencyTemp = currentFromCurrency;
-    let currentToCurrencyTemp = currentToCurrency;
-
-    for (let i = 0; i < activeFromOption.length; i++) {
-        if (selectFromElm.options[i].value.toLowerCase() === currentToCurrency) {
-            selectFromElm.options[i].selected = true;
-            currentFromCurrencyTemp = selectFromElm.options[i].value.toLowerCase();
-        }
-    }
-
-    for (let i = 0; i < activeToOption.length; i++) {
-        if (selectToElm.options[i].value.toLowerCase() === currentFromCurrency) {
-            selectToElm.options[i].selected = true;
-            currentToCurrencyTemp = selectToElm.options[i].value.toLowerCase();
-        }
-    }
-
-    currentFromCurrency = currentFromCurrencyTemp;
-    currentToCurrency = currentToCurrencyTemp;
-
-    prosesKonversi();
-    drawChart();
-});
-
 async function drawChart() {
     try {
         showLoader(loaderGrafik);
@@ -318,18 +359,118 @@ async function drawChart() {
             }
         });
         hideLoader(loaderGrafik);
-    } catch(err) {
+    } catch (err) {
         hideLoader(loaderGrafik);
         throw err;
     }
 }
 
-let chart = null;
-
 timeSelectElm.addEventListener("change", async () => {
     try {
-    drawChart();
+        drawChart();
     } catch (err) {
         console.log(err);
+    }
+});
+
+
+// Riwayat
+riwayatContainer.addEventListener("click", (event) => {
+    const elm = event.target.closest('.btnRiwayat');
+
+    if (elm) {
+        event.preventDefault();
+
+        try {
+            const id = elm.dataset.id;
+            const parsed = getRiwayatFromLocalStorage();
+
+            const data = parsed.find(val => val.id === id);
+
+            currentFromCurrency = data.from;
+            currentToCurrency = data.to;
+
+            const activeFromOption = selectFromElm.options;
+            const activeToOption = selectFromElm.options;
+
+            for (let i = 0; i < activeFromOption.length; i++) {
+                if (selectFromElm.options[i].value.toLowerCase() === currentFromCurrency) {
+                    selectFromElm.options[i].selected = true;
+                }
+            }
+
+            for (let i = 0; i < activeToOption.length; i++) {
+                if (selectToElm.options[i].value.toLowerCase() === currentToCurrency) {
+                    selectToElm.options[i].selected = true;
+                }
+            }
+
+            prosesKonversi(true);
+            drawChart();
+
+        } catch(err) {
+            alert(err.message);
+        }
+    }
+});
+
+function generateBtnRiwayat(fromCurrency, toCurrency) {
+
+    riwayatContainer.insertAdjacentHTML('afterbegin', `
+        <button type="button" class="flex hover:bg-gray-200 hover:cursor-pointer items-center bg-gray-300 p-3 rounded-3xl gap-2 btnRiwayat" data-id="${fromCurrency}-${toCurrency}">
+          <p class="text-sm">${fromCurrency.toUpperCase()}</p>
+          <svg id="svgArrowRight" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
+            <path d="M5 12h14" />
+            <path d="M12 5l7 7-7 7" />
+          </svg>
+          <p class="text-sm">${toCurrency.toUpperCase()}</p>
+        </button>`);
+
+    if (!textRiwayatKosong.classList.contains("hidden")) {
+        textRiwayatKosong.classList.add("hidden");
+    }
+
+}
+
+function saveToRiwayat() {
+    try {
+        const parsed = getRiwayatFromLocalStorage();
+    
+        let isFound = false;
+        parsed.forEach((item) => {
+            if (item.id === `${currentFromCurrency}-${currentToCurrency}`) {
+                isFound = true;
+            }
+        });
+    
+        parsed.filter((item) => {
+            return item.id !== `${currentFromCurrency}-${currentToCurrency}`
+        });
+    
+        if (!isFound) {
+            parsed.push({
+                id: `${currentFromCurrency}-${currentToCurrency}`,
+                from: `${currentFromCurrency}`,
+                to: `${currentToCurrency}`
+            });
+    
+            generateBtnRiwayat(currentFromCurrency.toLocaleLowerCase(), currentToCurrency.toLocaleLowerCase());
+        }
+    
+        localStorage.setItem(KEY_RIWAYAT, JSON.stringify(parsed));
+    } catch(err) {
+        throw err;
+    }
+}
+
+btnRemoveRiwayat.addEventListener("click", (item) => {
+    const isConfirm = confirm("Yakin ingin menhapus riwayat?");
+
+    if (isConfirm) {
+        localStorage.setItem(KEY_RIWAYAT, JSON.stringify([]));
+        riwayatContainer.replaceChildren();
+        textRiwayatKosong.classList.remove("hidden");
     }
 });

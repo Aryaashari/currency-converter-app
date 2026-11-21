@@ -52,16 +52,16 @@
               </div>
             </div>
 
-              <button id="btnChange" type="button" class="self-center rounded-full p-2 border-gray-200 border-2 mt-5">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                  aria-hidden="true">
-                  <path d="M7 20V4" />
-                  <path d="M3 8l4-4 4 4" />
-                  <path d="M17 4v16" />
-                  <path d="M21 16l-4 4-4-4" />
-                </svg>
-              </button>
+            <button id="btnChange" type="button" class="self-center rounded-full p-2 border-gray-200 border-2 mt-5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M7 20V4" />
+                <path d="M3 8l4-4 4 4" />
+                <path d="M17 4v16" />
+                <path d="M21 16l-4 4-4-4" />
+              </svg>
+            </button>
 
             <div class="ml-2">
               <label for="to">Ke</label>
@@ -158,7 +158,26 @@
 
     </section>
 
-    <section id="riwayat"></section>
+    <section id="riwayat" class="p-3 rounded-2xl bg-white">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-xl mb-3">Riwayat</h2>
+        <button id="btnRemoveRiwayat" type="button" class="bg-red-300 hover:bg-red-200 hover:cursor-pointer rounded-full p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18" />
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6" />
+            <path d="M14 11v6" />
+          </svg>
+      </button>
+      </div>
+
+      <div class="flex flex-wrap gap-3" id="riwayatContainer">
+      </div>
+
+      <h3 id="textRiwayatKosong" class="hidden">Tidak ada riwayat</h3>
+    </section>
 
   </main>
   <!-- End Main -->
