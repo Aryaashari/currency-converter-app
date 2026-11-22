@@ -43,6 +43,16 @@ const textPergerakanGrafik = document.getElementById("textPergerakanGrafik");
 const textRiwayatKosong = document.getElementById("textRiwayatKosong");
 
 const fmt = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 4 });
+const fmtKecil = new Intl.NumberFormat('id-ID', { maximumSignificantDigits: 4 });
+const fmtPersen = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function formatAngka(value) {
+    if (value !== 0 && Math.abs(value) < 1) {
+        return fmtKecil.format(value);
+    }
+
+    return fmt.format(value);
+}
 
 const KEY_RIWAYAT = "localstorage-riwayat";
 
@@ -63,6 +73,8 @@ function hideLoader(elm) {
 let currentFromCurrency = "";
 let currentToCurrency = "";
 let listMataUang = [];
+let konversiRequestId = 0;
+let chartRequestId = 0;
 
 (async () => {
 
@@ -139,6 +151,7 @@ function getRiwayatFromLocalStorage() {
 }
 
 async function prosesKonversi(isUbahCurrency = false) {
+    const requestId = ++konversiRequestId;
     const jumlah = Number(inputJumlahElm.value);
     const detailFromCurrency = findCurrency(listMataUang, currentFromCurrency);
     const detailToCurrency = findCurrency(listMataUang, currentToCurrency);
@@ -146,22 +159,30 @@ async function prosesKonversi(isUbahCurrency = false) {
     try {
         showLoader(loaderResult);
         if (isUbahCurrency) {
-            showLoader(loaderGrafik);
+            drawChart();
         }
         const url = buildRateUrl(currentFromCurrency, currentToCurrency);
         const res = await fetch(url);
 
         if (!res.ok) {
-            throw new Error(res);
+            throw new Error(`Gagal mengambil rate (status ${res.status})`);
         }
 
         const data = await res.json();
+        if (isUbahCurrency) {
+            saveToRiwayat();
+        }
+
+        if (requestId !== konversiRequestId) {
+            return;
+        }
+
         jumlahKonversiText.textContent = `${fmt.format(jumlah)} ${getCurrencyName(listMataUang, detailFromCurrency.iso_code)}`;
 
-        const resPerhitungan = (jumlah * data.rate);
-        resultKonversiText.textContent = fmt.format(resPerhitungan);
+        const resPerhitungan = jumlah * data.rate;
+        resultKonversiText.textContent = formatAngka(resPerhitungan);
         currencyResultKonversiText.textContent = detailToCurrency.iso_code;
-        keteranganText.textContent = `1 ${detailFromCurrency.iso_code} = ${fmt.format(1 * data.rate)} ${detailToCurrency.iso_code}`;
+        keteranganText.textContent = `1 ${detailFromCurrency.iso_code} = ${formatAngka(data.rate)} ${detailToCurrency.iso_code}`;
         const formattedDate = new Date(data.date).toLocaleDateString("id-ID", {
             day: "2-digit",
             month: "short",
@@ -170,15 +191,13 @@ async function prosesKonversi(isUbahCurrency = false) {
         });
         dateText.textContent = `Tanggal: ${formattedDate}`;
 
-        currencySymbolText.textContent = currentFromCurrency.toLocaleUpperCase();
-        if (isUbahCurrency) {
-            drawChart();
-            saveToRiwayat();
-        }
+        currencySymbolText.textContent = detailFromCurrency.iso_code;
         hideLoader(loaderResult);
     } catch (err) {
-        hideLoader(loaderResult);
-        alert(err.message);
+        if (requestId === konversiRequestId) {
+            hideLoader(loaderResult);
+            alert(err.message);
+        }
     }
 }
 
@@ -248,7 +267,6 @@ btnChange.addEventListener("click", () => {
     currentToCurrency = currentToCurrencyTemp;
 
     prosesKonversi(true);
-    drawChart();
 });
 
 // Chart
@@ -256,48 +274,45 @@ const ctx = document.getElementById("grafik").getContext('2d');
 const timeSelectElm = document.getElementById("time");
 let chart = null;
 
-async function generateChartData(startDate, endDate) {
+async function generateChartData(startDate, endDate, requestId = chartRequestId) {
 
     try {
 
         const url = buildRatesUrl(startDate, endDate, currentFromCurrency, currentToCurrency);
         const res = await fetch(url);
         if (!res.ok) {
-            throw new Error(res);
+            throw new Error(`Gagal mengambil data grafik (status ${res.status})`);
         }
         const data = await res.json();
 
-        let tertinggi = 0;
-        let terendah = 0;
-        let rata2 = 0;
-        let arrData = [];
-        let labels = [];
-        data.forEach((item) => {
-            labels.push(item.date);
-            if (1 * item.rate > tertinggi) {
-                tertinggi = 1 * item.rate;
-            } else if (1 * item.rate < terendah || terendah === 0) {
-                terendah = 1 * item.rate;
-            }
+        if (requestId !== chartRequestId) {
+            return null;
+        }
 
-            rata2 = rata2 + (1 * item.rate);
+        if (!Array.isArray(data) || data.length === 0) {
+            throw new Error("Data grafik tidak tersedia untuk periode ini");
+        }
 
-            arrData.push(1 * item.rate);
-        });
-        rata2 = (rata2 / data.length);
+        const labels = data.map(item => item.date);
+        const arrData = data.map(item => item.rate);
 
-        const dataPertama = data[0];
-        const dataTerakhir = data[data.length - 1];
-        let selisih = (1 * dataTerakhir.rate) - (1 * dataPertama.rate);
-        const persenPerubahan = ((selisih / dataPertama.rate) * 100).toFixed(2);
+        const tertinggi = Math.max(...arrData);
+        const terendah = Math.min(...arrData);
+        const rata2 = arrData.reduce((total, rate) => total + rate, 0) / arrData.length;
 
-        textTertinggi.textContent = fmt.format(tertinggi);
-        textTerendah.textContent = fmt.format(terendah);
-        textRata2.textContent = fmt.format(Math.round(rata2));
-        mainGrafikText.textContent = fmt.format(1 * dataTerakhir.rate);
-        selisih = fmt.format(selisih);
+        const ratePertama = arrData[0];
+        const rateTerakhir = arrData[arrData.length - 1];
+        const selisih = rateTerakhir - ratePertama;
+        const persenPerubahan = (selisih / ratePertama) * 100;
+        const isNaik = selisih >= 0;
+        const tanda = isNaik ? '+' : '';
 
-        subTextGrafik.textContent = `${selisih >= 0 ? '+' + selisih : selisih} (${persenPerubahan >= 0 ? '+' + persenPerubahan : persenPerubahan}%)`;
+        textTertinggi.textContent = formatAngka(tertinggi);
+        textTerendah.textContent = formatAngka(terendah);
+        textRata2.textContent = formatAngka(rata2);
+        mainGrafikText.textContent = formatAngka(rateTerakhir);
+
+        subTextGrafik.textContent = `${tanda}${formatAngka(selisih)} (${tanda}${fmtPersen.format(persenPerubahan)}%)`;
 
         textPergerakanGrafik.textContent = `Pergerakan ${currentFromCurrency.toUpperCase()} ke ${currentToCurrency.toUpperCase()}`;
 
@@ -306,7 +321,7 @@ async function generateChartData(startDate, endDate) {
 
         svgArrowUp.classList.add("hidden");
         svgArrowDown.classList.add("hidden");
-        if (selisih >= 0) {
+        if (isNaik) {
             subTextContainer.classList.add("bg-green-200");
             svgArrowUp.classList.remove("hidden");
         } else {
@@ -321,7 +336,7 @@ async function generateChartData(startDate, endDate) {
                     label: `${currentFromCurrency.toUpperCase()} to ${currentToCurrency.toUpperCase()}`,
                     data: arrData,
                     pointStyle: 'circle',
-                    borderColor: `${selisih >= 0 ? 'green' : 'red'}`
+                    borderColor: isNaik ? 'green' : 'red'
                 }
             ]
         }
@@ -333,13 +348,19 @@ async function generateChartData(startDate, endDate) {
 }
 
 async function drawChart() {
+    const requestId = ++chartRequestId;
+
     try {
         showLoader(loaderGrafik);
         const endDate = new Date();
         let startDate = new Date();
 
         startDate.setDate(startDate.getDate() - Number(timeSelectElm.value));
-        const data = await generateChartData(startDate.toLocaleDateString('en-CA'), endDate.toLocaleDateString('en-CA'));
+        const data = await generateChartData(startDate.toLocaleDateString('en-CA'), endDate.toLocaleDateString('en-CA'), requestId);
+
+        if (!data) {
+            return;
+        }
 
         if (chart) {
             chart.destroy();
@@ -359,17 +380,15 @@ async function drawChart() {
         });
         hideLoader(loaderGrafik);
     } catch (err) {
-        hideLoader(loaderGrafik);
-        throw err;
+        if (requestId === chartRequestId) {
+            hideLoader(loaderGrafik);
+            alert(err.message);
+        }
     }
 }
 
-timeSelectElm.addEventListener("change", async () => {
-    try {
-        drawChart();
-    } catch (err) {
-        console.log(err);
-    }
+timeSelectElm.addEventListener("change", () => {
+    drawChart();
 });
 
 
@@ -405,7 +424,6 @@ riwayatContainer.addEventListener("click", (event) => {
             }
 
             prosesKonversi(true);
-            drawChart();
 
         } catch(err) {
             alert(err.message);
