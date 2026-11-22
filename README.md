@@ -3,6 +3,7 @@
 Aplikasi web sederhana untuk mengonversi mata uang dan melihat grafik pergerakan kurs. Data kurs diambil dari Frankfurter API.
 
 Live demo: https://kurs-app-aryaashari.netlify.app/
+Link Repo Github Asal: https://github.com/Aryaashari/currency-converter-app
 
 ## Cara Menggunakan
 
