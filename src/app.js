@@ -1,10 +1,10 @@
 import Chart from "chart.js/auto";
+import { buildCurrenciesUrl, buildRateUrl, buildRatesUrl, findCurrency, getCurrencyName, getCurrencyOptionLabel } from "./rate-helper.js";
+import { createHistoryItem, nextHistory } from "./next-history.js";
 
 const inputJumlahElm = document.getElementById("jumlah");
 const selectFromElm = document.getElementById("from");
 const selectToElm = document.getElementById("to");
-
-const baseApiUrl = "https://api.frankfurter.dev/v2/";
 
 const loaderResult = document.getElementById("loaderResult");
 const loaderGrafik = document.getElementById("loaderGrafik");
@@ -74,11 +74,7 @@ let listMataUang = [];
 
         if (!localStorage.getItem(KEY_RIWAYAT) || localStorage.getItem(KEY_RIWAYAT) === "[]") {
             localStorage.setItem(KEY_RIWAYAT, JSON.stringify([
-                {
-                    id: "usd-idr",
-                    from: "usd",
-                    to: "idr"
-                }
+                createHistoryItem("usd", "idr")
             ]));
         }
 
@@ -87,7 +83,7 @@ let listMataUang = [];
             generateBtnRiwayat(item.from, item.to);
         });
 
-        const res = await fetch(baseApiUrl + "currencies");
+        const res = await fetch(buildCurrenciesUrl());
         if (!res.ok) {
             throw new Error(res.status);
         }
@@ -98,8 +94,8 @@ let listMataUang = [];
         selectFromElm.length = 0;
         selectToElm.length = 0;
         data.forEach((item) => {
-            const newOption1 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
-            const newOption2 = new Option(`${item.iso_code} (${item.name})`, item.iso_code);
+            const newOption1 = new Option(getCurrencyOptionLabel(item), item.iso_code);
+            const newOption2 = new Option(getCurrencyOptionLabel(item), item.iso_code);
             if (item.iso_code === "USD") {
                 newOption1.selected = true;
                 currentFromCurrency = item.iso_code.toLowerCase();
@@ -144,15 +140,15 @@ function getRiwayatFromLocalStorage() {
 
 async function prosesKonversi(isUbahCurrency = false) {
     const jumlah = Number(inputJumlahElm.value);
-    const detailFromCurrency = listMataUang.find(item => item.iso_code.toLowerCase() === currentFromCurrency);
-    const detailToCurrency = listMataUang.find(item => item.iso_code.toLowerCase() === currentToCurrency);
+    const detailFromCurrency = findCurrency(listMataUang, currentFromCurrency);
+    const detailToCurrency = findCurrency(listMataUang, currentToCurrency);
 
     try {
         showLoader(loaderResult);
         if (isUbahCurrency) {
             showLoader(loaderGrafik);
         }
-        const url = `${baseApiUrl}rate/${currentFromCurrency}/${currentToCurrency}`;
+        const url = buildRateUrl(currentFromCurrency, currentToCurrency);
         const res = await fetch(url);
 
         if (!res.ok) {
@@ -160,7 +156,7 @@ async function prosesKonversi(isUbahCurrency = false) {
         }
 
         const data = await res.json();
-        jumlahKonversiText.textContent = `${fmt.format(jumlah)} ${detailFromCurrency.name}`;
+        jumlahKonversiText.textContent = `${fmt.format(jumlah)} ${getCurrencyName(listMataUang, detailFromCurrency.iso_code)}`;
 
         const resPerhitungan = (jumlah * data.rate);
         resultKonversiText.textContent = fmt.format(resPerhitungan);
@@ -264,7 +260,7 @@ async function generateChartData(startDate, endDate) {
 
     try {
 
-        const url = baseApiUrl + `rates?from=${startDate}&to=${endDate}&base=${currentFromCurrency}&quotes=${currentToCurrency}`;
+        const url = buildRatesUrl(startDate, endDate, currentFromCurrency, currentToCurrency);
         const res = await fetch(url);
         if (!res.ok) {
             throw new Error(res);
@@ -440,29 +436,13 @@ function generateBtnRiwayat(fromCurrency, toCurrency) {
 function saveToRiwayat() {
     try {
         const parsed = getRiwayatFromLocalStorage();
-    
-        let isFound = false;
-        parsed.forEach((item) => {
-            if (item.id === `${currentFromCurrency}-${currentToCurrency}`) {
-                isFound = true;
-            }
-        });
-    
-        parsed.filter((item) => {
-            return item.id !== `${currentFromCurrency}-${currentToCurrency}`
-        });
-    
+        const { riwayat, isFound } = nextHistory(parsed, currentFromCurrency, currentToCurrency);
+
         if (!isFound) {
-            parsed.push({
-                id: `${currentFromCurrency}-${currentToCurrency}`,
-                from: `${currentFromCurrency}`,
-                to: `${currentToCurrency}`
-            });
-    
             generateBtnRiwayat(currentFromCurrency.toLocaleLowerCase(), currentToCurrency.toLocaleLowerCase());
         }
-    
-        localStorage.setItem(KEY_RIWAYAT, JSON.stringify(parsed));
+
+        localStorage.setItem(KEY_RIWAYAT, JSON.stringify(riwayat));
     } catch(err) {
         throw err;
     }
