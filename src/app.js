@@ -371,6 +371,7 @@ async function drawChart() {
             data: data,
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     title: {
                         display: true,
